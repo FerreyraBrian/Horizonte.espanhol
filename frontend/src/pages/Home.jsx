@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Home page - Welcome landing page
+// Home page - Welcome landing page for Horizonte Español
 const Home = () => (
   <div>
     <section className='card'>
