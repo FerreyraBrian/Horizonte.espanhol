@@ -104,7 +104,10 @@ CREATE TABLE users (
     avatar_url VARCHAR(500),
     current_course_id INTEGER REFERENCES courses(id),
     progress INTEGER DEFAULT 0,
-    role VARCHAR(20) DEFAULT 'student',   -- 'student', 'admin'
+    role VARCHAR(20) DEFAULT 'STUDENT',   -- 'STUDENT', 'ADMIN'
+    status VARCHAR(20) DEFAULT 'PENDING', -- 'PENDING', 'ACTIVE', 'SUSPENDED', 'EXPIRED'
+    email_verified BOOLEAN DEFAULT FALSE,
+    enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -165,3 +168,4 @@ CREATE INDEX idx_user_progress_user ON user_progress(user_id);
 CREATE INDEX idx_user_progress_lesson ON user_progress(lesson_id);
 CREATE INDEX idx_writing_submissions_user ON writing_submissions(user_id);
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role_status ON users(role, status);

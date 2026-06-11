@@ -1,0 +1,12 @@
+package com.horizonte.api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class HorizonApiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(HorizonApiApplication.class, args);
+    }
+}
