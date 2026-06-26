@@ -1,58 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Star, Home, MessageSquare, LogOut, Search, User, Settings, Lock, FileDown, Sun, Moon, BookOpen, Megaphone, ClipboardCheck, Menu, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import UserAvatar from '../ui/UserAvatar';
 import OriAssistant from '../ui/OriAssistant';
 
+// ===== CONSTANTES DE DISEÑO =====
+const SIDEBAR_WIDTH = {
+  EXPANDED: 280,  // px
+  COLLAPSED: 72,  // px
+};
+
 const AppShell = ({ children, userProgress }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const isActive = (path) => location.pathname === path;
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // ===== ESTADOS =====
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('appSidebarCollapsed');
+    return saved === '1';
+  });
+  
   const [theme, setTheme] = useState('light');
   const [mounted, setMounted] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // ===== DERIVADOS =====
   const isKidsExperience = location.pathname.startsWith('/painel-infantil')
     || location.pathname.startsWith('/evaluacoes-infantil')
     || location.pathname.startsWith('/perfil-infantil');
-  const showOri = user?.role === 'STUDENT' && user?.status === 'active';
 
-  useEffect(() => {
-    setMounted(true);
-    const storedTheme = localStorage.getItem('theme') || 'light';
-    const storedSidebar = localStorage.getItem('appSidebarCollapsed');
-    setTheme(storedTheme);
-    setSidebarCollapsed(storedSidebar === '1');
-    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+  const normalizedRole = String(user?.role ?? '').toUpperCase();
+  const normalizedStatus = String(user?.status ?? '').toUpperCase();
+  const showOri = normalizedRole === 'STUDENT' && normalizedStatus === 'ACTIVE';
+  
+  // Calcular ancho actual del sidebar
+  const currentSidebarWidth = isMobile 
+    ? 0 
+    : (sidebarCollapsed ? SIDEBAR_WIDTH.COLLAPSED : SIDEBAR_WIDTH.EXPANDED);
+
+  // ===== HANDLERS =====
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('appSidebarCollapsed', next ? '1' : '0');
+      return next;
+    });
   }, []);
 
-  const toggleTheme = (newTheme) => {
+  const toggleTheme = useCallback((newTheme) => {
     if (!mounted) return;
     setTheme(newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
     localStorage.setItem('theme', newTheme);
-  };
+  }, [mounted]);
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed((current) => {
-      const next = !current;
-      localStorage.setItem('appSidebarCollapsed', next ? '1' : '0');
-      return next;
-    });
-  };
+  const toggleUserMenu = useCallback(() => {
+    setUserMenuOpen(prev => !prev);
+  }, []);
 
-  const toggleUserMenu = () => {
-    setUserMenuOpen(!userMenuOpen);
-  };
-
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     setUserMenuOpen(false);
     navigate('/login');
-  };
+  }, [logout, navigate]);
 
+  // ===== EFECTOS =====
+  useEffect(() => {
+    setMounted(true);
+    const storedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(storedTheme);
+    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+  }, []);
+
+  // Detectar cambios de tamaño
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile && !sidebarCollapsed) {
+        setSidebarCollapsed(true);
+        localStorage.setItem('appSidebarCollapsed', '1');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarCollapsed]);
+
+  // ===== COMPONENTES INTERNOS =====
   const LogoStars = () => (
     <div className={`app-logo-stars ${sidebarCollapsed ? 'app-logo-stars-collapsed' : ''}`}>
       <Star size={16} className="app-logo-star" />
@@ -67,6 +105,7 @@ const AppShell = ({ children, userProgress }) => {
   const userButtonClass = `app-user-button${sidebarCollapsed ? ' app-user-button-collapsed' : ''}`;
   const themeButtonClass = (active) => `app-theme-btn${active ? ' active' : ''}`;
 
+  // ===== NAVEGACIÓN INFANTIL =====
   const KidsNav = () => (
     <>
       <div className="app-sidebar-header">
@@ -90,11 +129,11 @@ const AppShell = ({ children, userProgress }) => {
         )}
       </div>
       <div className="app-nav">
-        <NavLink to="/painel-infantil" className={navLinkClass(isActive('/painel-infantil'))}>
+        <NavLink to="/painel-infantil" className={navLinkClass(location.pathname === '/painel-infantil')}>
           <Home size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Minhas Aulas</span>}
         </NavLink>
-        <NavLink to="/evaluacoes-infantil" className={navLinkClass(isActive('/evaluacoes-infantil'))}>
+        <NavLink to="/evaluacoes-infantil" className={navLinkClass(location.pathname === '/evaluacoes-infantil')}>
           <ClipboardCheck size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Avaliações</span>}
         </NavLink>
@@ -127,6 +166,7 @@ const AppShell = ({ children, userProgress }) => {
     </>
   );
 
+  // ===== NAVEGACIÓN ADULTOS =====
   const AdultNav = () => (
     <>
       <div className="app-sidebar-header">
@@ -150,31 +190,31 @@ const AppShell = ({ children, userProgress }) => {
         )}
       </div>
       <div className="app-nav">
-        <NavLink to="/dashboard" className={navLinkClass(isActive('/dashboard'))}>
+        <NavLink to="/dashboard" className={navLinkClass(location.pathname === '/dashboard')}>
           <Home size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Minhas Aulas</span>}
         </NavLink>
-        <NavLink to="/evaluacoes" className={navLinkClass(isActive('/evaluacoes'))}>
+        <NavLink to="/evaluacoes" className={navLinkClass(location.pathname === '/evaluacoes')}>
           <ClipboardCheck size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Avaliações</span>}
         </NavLink>
-        <NavLink to="/cartelera" className={navLinkClass(isActive('/cartelera'))}>
+        <NavLink to="/cartelera" className={navLinkClass(location.pathname === '/cartelera')}>
           <Megaphone size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Cartelera</span>}
         </NavLink>
-        <NavLink to="/forum" className={navLinkClass(isActive('/forum'))}>
+        <NavLink to="/forum" className={navLinkClass(location.pathname === '/forum')}>
           <MessageSquare size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Fórum</span>}
         </NavLink>
-        <NavLink to="/resources" className={navLinkClass(isActive('/resources'))}>
+        <NavLink to="/resources" className={navLinkClass(location.pathname === '/resources')}>
           <FileDown size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Materiais</span>}
         </NavLink>
-        <NavLink to="/espanhol-para-criancas" className={navLinkClass(isActive('/espanhol-para-criancas'))}>
+        <NavLink to="/espanhol-para-criancas" className={navLinkClass(location.pathname === '/espanhol-para-criancas')}>
           <BookOpen size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Espaço Infantil</span>}
         </NavLink>
-        <NavLink to="/contato" className={navLinkClass(isActive('/contato'))}>
+        <NavLink to="/contato" className={navLinkClass(location.pathname === '/contato')}>
           <MessageSquare size={20} className="app-nav-icon" />
           {!sidebarCollapsed && <span>Contato</span>}
         </NavLink>
@@ -223,24 +263,52 @@ const AppShell = ({ children, userProgress }) => {
     </>
   );
 
+  // ===== RENDER =====
   return (
     <div className="app-shell">
-      <button
-        type="button"
-        className={`app-sidebar-backdrop ${sidebarCollapsed ? '' : 'is-visible'}`}
-        aria-label="Fechar menu lateral"
-        onClick={toggleSidebar}
-      />
-      <aside className={`app-sidebar ${sidebarCollapsed ? 'app-sidebar-collapsed' : 'app-sidebar-expanded'}`}>
+      {/* BACKDROP - Solo visible en móvil cuando el sidebar está expandido */}
+      {isMobile && !sidebarCollapsed && (
+        <div 
+          className="app-sidebar-backdrop is-visible"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      {/* SIDEBAR */}
+      <aside 
+        className={`
+          app-sidebar
+          ${sidebarCollapsed ? 'app-sidebar-collapsed' : 'app-sidebar-expanded'}
+          ${isMobile ? 'app-sidebar-mobile' : ''}
+          ${isMobile && sidebarCollapsed ? 'app-sidebar-mobile-hidden' : ''}
+          ${isMobile && !sidebarCollapsed ? 'app-sidebar-mobile-visible' : ''}
+        `}
+        style={{
+          width: isMobile 
+            ? (sidebarCollapsed ? 0 : SIDEBAR_WIDTH.EXPANDED) 
+            : (sidebarCollapsed ? SIDEBAR_WIDTH.COLLAPSED : SIDEBAR_WIDTH.EXPANDED)
+        }}
+      >
         {isKidsExperience ? <KidsNav /> : <AdultNav />}
       </aside>
-      <div className="app-main">
+
+      {/* CONTENIDO PRINCIPAL */}
+      <div 
+        className="app-main"
+        style={{
+          marginLeft: isMobile ? 0 : currentSidebarWidth,
+          transition: 'margin-left 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
         <header className="app-header">
           <div className="app-header-left">
-            <button onClick={toggleSidebar} className="app-toggle-btn">
+            <button 
+              onClick={toggleSidebar} 
+              className="app-toggle-btn"
+              aria-label={sidebarCollapsed ? 'Abrir menú' : 'Cerrar menú'}
+            >
               {sidebarCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
             </button>
-            {/* Search bar removed as requested */}
           </div>
           <div className="app-header-right">
             <button onClick={() => toggleTheme('light')} className={themeButtonClass(theme === 'light')}>

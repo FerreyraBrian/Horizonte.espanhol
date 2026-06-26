@@ -317,14 +317,14 @@ const Register = () => {
                 )}
               </div>
 
-              {/* Termos e condições */}
+              {/* Termos e condições - CORREÇÃO AQUI */}
               <div className="flex items-start gap-2 py-2">
                 <input
                   type="checkbox"
                   id="terms"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-1 rounded-2xl border-slate-300 focus:ring-blue-500"
+                  className="mt-1 rounded border-slate-300 focus:ring-blue-500"
                   required
                 />
                 <label htmlFor="terms" className="text-sm text-slate-600 dark:text-slate-400">
