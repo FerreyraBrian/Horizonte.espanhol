@@ -115,11 +115,9 @@ const App = () => {
       <Route
         path="/evaluacoes"
         element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <AppShell userProgress={userProgress}>
-              <EvaluationsPage />
-            </AppShell>
-          </ProtectedRoute>
+          <AppShell userProgress={userProgress}>
+            <EvaluationsPage userProgress={userProgress} />
+          </AppShell>
         }
       />
       <Route
@@ -153,13 +151,27 @@ const App = () => {
         }
       />
       <Route
+        path="/lessons"
+        element={
+          <AppShell userProgress={userProgress}>
+            <Lessons lessons={enrichedLessons} userProgress={userProgress} />
+          </AppShell>
+        }
+      />
+      <Route
+        path="/lessons/:slug"
+        element={
+          <AppShell userProgress={userProgress}>
+            <LessonDetail lessons={enrichedLessons} />
+          </AppShell>
+        }
+      />
+      <Route
         path="/lesson/:slug"
         element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <AppShell userProgress={userProgress}>
-              <LessonDetail />
-            </AppShell>
-          </ProtectedRoute>
+          <AppShell userProgress={userProgress}>
+            <LessonDetail lessons={enrichedLessons} />
+          </AppShell>
         }
       />
 

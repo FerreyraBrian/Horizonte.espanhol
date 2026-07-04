@@ -182,7 +182,7 @@ const Register = () => {
               Criar Conta
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Seu cadastro entra como pendente até a aprovação do administrador.
+              Seu cadastro entra como pendente até a aprovação do administrador e é salvo no backend quando o servidor estiver ligado.
             </p>
           </div>
 

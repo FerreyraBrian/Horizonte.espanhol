@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /Users/patri/Horizonte\\.espanhol/frontend ; npm run build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

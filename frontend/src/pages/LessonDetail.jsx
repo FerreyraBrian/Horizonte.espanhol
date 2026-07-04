@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import LessonClientPage from '../components/lessons/LessonClientPage';
+import { lessons as fallbackLessons } from '../services/mockData';
 
-const LessonDetail = ({ lessons, onComplete, userProgress, onProgressUpdate }) => {
+const LessonDetail = ({ lessons: lessonsProp, onComplete, userProgress, onProgressUpdate }) => {
+  const lessons = lessonsProp?.length ? lessonsProp : fallbackLessons;
   const { slug } = useParams();
   const navigate = useNavigate();
   const [lesson, setLesson] = useState(null);
@@ -88,38 +90,32 @@ const LessonDetail = ({ lessons, onComplete, userProgress, onProgressUpdate }) =
   };
 
   const handleComplete = useCallback((lessonId) => {
-    // Marcar lección como completada
     const completedLessons = JSON.parse(localStorage.getItem('completed_lessons') || '[]');
-    
+
     if (!completedLessons.includes(lessonId)) {
       completedLessons.push(lessonId);
       localStorage.setItem('completed_lessons', JSON.stringify(completedLessons));
-      
-      // Actualizar progreso total
+
       const totalLessons = lessons.length;
-      const progress = (completedLessons.length / totalLessons) * 100;
-      localStorage.setItem('user_progress_percentage', progress);
-      
-      // Mostrar celebración
+      const progress = totalLessons > 0 ? (completedLessons.length / totalLessons) * 100 : 0;
+      localStorage.setItem('user_progress_percentage', String(progress));
+
       showCelebration();
-      
-      // Llamar al callback si existe
+
       if (onComplete) {
         onComplete(lessonId);
       }
-      
-      // Disparar evento global
+
       window.dispatchEvent(new CustomEvent('lessonCompleted', {
         detail: {
           lessonId,
           lessonSlug: slug,
           completedLessons: completedLessons.length,
-          progress
-        }
+          progress,
+        },
       }));
     }
-    
-    // Preguntar si quiere ir a la siguiente lección
+
     if (nextLesson) {
       setTimeout(() => {
         const goToNext = window.confirm('🎉 ¡Lección completada! ¿Quieres ir a la siguiente lección?');
@@ -128,7 +124,7 @@ const LessonDetail = ({ lessons, onComplete, userProgress, onProgressUpdate }) =
         }
       }, 500);
     }
-  }, [lesson, nextLesson, slug, navigate, onComplete, lessons]);
+  }, [nextLesson, slug, navigate, onComplete, lessons]);
 
   const showCelebration = () => {
     // Crear elemento de celebración

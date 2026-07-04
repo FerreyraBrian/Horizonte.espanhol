@@ -115,16 +115,11 @@ const Login = () => {
               </button>
             </form>
             <div className="login-footer">
-              <strong>Credenciais de Teste (Admin):</strong> <br />
-              Email: admin@horizonteespanhol.com <br />
-              Senha: Admin@12345 <br />
-              <em>(Acesso ao painel de administração sem backend)</em>
-              <br />
-              <br />
-              <strong>Credenciais de Teste (Aluno):</strong> <br />
-              Email: student@horizonte.espanhol <br />
-              Senha: 12345678 <br />
-              <em>(Acesso à experiência do aluno para demonstração)</em>
+              <strong>Conexão com o servidor:</strong> <br />
+              Use o backend em <code>http://localhost:3001</code> para autenticação real. <br />
+              <strong>Conta admin:</strong> admin@horizonteespanhol.com / Admin@12345 <br />
+              <strong>Conta aluno:</strong> aluno@horizonteespanhol.com / Aluno@12345 <br />
+              <em>As credenciais de demonstração continuam disponíveis enquanto o backend não estiver em execução.</em>
             </div>
             <div className="login-footer">
               Não tem conta?{' '}

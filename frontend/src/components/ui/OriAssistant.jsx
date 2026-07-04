@@ -1,41 +1,42 @@
-import React, { useState } from 'react';
-import { MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Send, Sparkles, X, Bot, BookOpenText, GraduationCap } from 'lucide-react';
 
 const faqData = [
   {
     id: 'faq-01',
-    question: 'Como começo meu curso?',
-    keywords: ['começar', 'inicio', 'começo', 'iniciar', 'curso'],
+    keywords: ['começar', 'inicio', 'começo', 'iniciar', 'curso', 'aula', 'lição', 'licao'],
     answer:
-      'Comece acessando o painel de aluno depois do login. A primeira lição está disponível em "Minhas Aulas" e o curso segue em ordem para você avançar com segurança.',
+      'Você pode começar abrindo a área de aulas no painel. A primeira lição já está disponível e a sequência do curso foi pensada para você avançar com calma e confiança.',
   },
   {
     id: 'faq-02',
-    question: 'O que inclui a assinatura?',
-    keywords: ['assinatura', 'incluso', 'inclui', 'planos', 'pacote'],
+    keywords: ['assinatura', 'incluso', 'inclui', 'planos', 'pacote', 'benefício', 'beneficios'],
     answer:
-      'A assinatura inclui acesso às aulas em vídeo, materiais de apoio, avaliações, fórum de dúvidas e suporte da Ori para perguntas frequentes sobre o curso.',
+      'A assinatura inclui aulas em vídeo, materiais de apoio, avaliações, fórum de dúvidas e um espaço de ajuda com a Ori para orientar seus próximos passos.',
   },
   {
     id: 'faq-03',
-    question: 'Como eu acesso os materiais extras?',
-    keywords: ['materiais', 'extras', 'acesso', 'download', 'recursos'],
+    keywords: ['materiais', 'extras', 'acesso', 'download', 'recursos', 'pdf', 'áudio', 'audio'],
     answer:
-      'Os materiais extras estão em "Materiais" no menu do aluno. Lá você encontra PDFs, áudios e conteúdo adicional para praticar após cada lição.',
+      'Os materiais extras ficam na seção de Materiais do aluno. Lá você encontra PDFs, áudios e conteúdos complementares para praticar depois de cada lição.',
   },
   {
     id: 'faq-04',
-    question: 'Tenho suporte para dúvidas de gramática?',
-    keywords: ['gramática', 'gramatica', 'dúvidas', 'duvidas', 'suporte'],
+    keywords: ['gramática', 'gramatica', 'dúvidas', 'duvidas', 'suporte', 'ajuda'],
     answer:
-      'Sim, Ori pode ajudar com dúvidas comuns de gramática e indicar os módulos relevantes. Para dúvidas mais específicas, use o fórum ou entre em contato com a equipe pelo painel de suporte.',
+      'Sim, posso te orientar com dúvidas comuns de gramática e te indicar o módulo mais útil. Para pedidos mais específicos, o fórum e o canal de contato também são boas opções.',
   },
   {
     id: 'faq-05',
-    question: 'Como melhorar a conversação no espanhol?',
-    keywords: ['conversação', 'conversacao', 'falar', 'fluência', 'prática'],
+    keywords: ['conversação', 'conversacao', 'falar', 'fluência', 'prática', 'pratica', 'pronúncia', 'pronuncia'],
     answer:
-      'Pratique todos os dias com as frases certas, escute áudios do curso e use as lições em ordem. Foque em repetição ativa e tente falar em voz alta quando revisar as aulas.',
+      'Para melhorar a conversação, combine repetição ativa com escuta, leitura curta e fala em voz alta. Eu recomendo praticar uma frase nova por dia e revisar as aulas em sequência.',
+  },
+  {
+    id: 'faq-06',
+    keywords: ['avaliação', 'avaliacao', 'prova', 'teste', 'nota'],
+    answer:
+      'As avaliações aparecem conforme o avanço nas aulas. Quando você concluir os módulos necessários, a plataforma libera o próximo desafio para você.',
   },
 ];
 
@@ -56,9 +57,7 @@ const findAnswer = (message) => {
     return match.answer;
   }
 
-  return (
-    'Desculpa, ainda estou aprendendo. Pergunte sobre acesso, assinatura, materiais ou conversação no curso.'
-  );
+  return 'Estou aqui para te ajudar com o curso. Pergunte sobre aulas, materiais, avaliação ou conversação e eu te guio com carinho.';
 };
 
 const OriAssistant = () => {
@@ -67,29 +66,39 @@ const OriAssistant = () => {
   const [messages, setMessages] = useState([
     {
       sender: 'bot',
-      text: 'Olá! Eu sou a Ori. Posso ajudar com dúvidas sobre o curso, assinatura e materiais.',
+      text: 'Olá! Eu sou a Ori. Estou pronta para te guiar pelo curso, responder dúvidas rápidas e ajudar você a continuar.',
     },
   ]);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  const addMessage = (sender, text) => {
+    setMessages((current) => [...current, { sender, text }]);
+  };
 
   const handleSendMessage = (text) => {
-    if (!text.trim()) {
+    const cleanedText = text.trim();
+
+    if (!cleanedText) {
       return;
     }
 
-    const userMessage = { sender: 'user', text };
-    const botMessage = { sender: 'bot', text: findAnswer(text) };
+    addMessage('user', cleanedText);
+    setIsTyping(true);
 
-    setMessages((current) => [...current, userMessage, botMessage]);
+    window.setTimeout(() => {
+      addMessage('bot', findAnswer(cleanedText));
+      setIsTyping(false);
+    }, 650);
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-
-    if (!inputValue.trim()) {
-      return;
-    }
-
-    handleSendMessage(inputValue.trim());
+    handleSendMessage(inputValue);
     setInputValue('');
   };
 
@@ -108,15 +117,23 @@ const OriAssistant = () => {
         <span className="ori-toggle-icon">
           <Sparkles size={18} />
         </span>
-        <span className="ori-toggle-label">Ori</span>
+        <span className="ori-toggle-copy">
+          <span className="ori-toggle-label">Ori</span>
+          <span className="ori-toggle-caption">Ajuda rápida</span>
+        </span>
       </button>
 
       {open && (
         <div className="ori-panel" role="dialog" aria-label="Assistente Ori">
           <div className="ori-header">
-            <div>
-              <p className="ori-title">Ori</p>
-              <p className="ori-subtitle">Assistente do curso</p>
+            <div className="ori-header-copy">
+              <div className="ori-avatar-pill">
+                <Bot size={16} />
+              </div>
+              <div>
+                <p className="ori-title">Ori</p>
+                <p className="ori-subtitle">Assistente do curso</p>
+              </div>
             </div>
             <button
               type="button"
@@ -134,9 +151,22 @@ const OriAssistant = () => {
                 key={`${message.sender}-${index}`}
                 className={`ori-message ori-message-${message.sender}`}
               >
-                <div className="ori-message-content">{message.text}</div>
+                <div className="ori-message-content">
+                  {message.text}
+                </div>
               </div>
             ))}
+
+            {isTyping ? (
+              <div className="ori-message ori-message-bot">
+                <div className="ori-message-content ori-typing">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            ) : null}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="ori-quick-prompts">
@@ -150,6 +180,17 @@ const OriAssistant = () => {
                 {prompt}
               </button>
             ))}
+          </div>
+
+          <div className="ori-support-strip">
+            <div className="ori-support-pill">
+              <BookOpenText size={14} />
+              <span>Aulas</span>
+            </div>
+            <div className="ori-support-pill">
+              <GraduationCap size={14} />
+              <span>Progresso</span>
+            </div>
           </div>
 
           <form className="ori-input-row" onSubmit={handleSubmit}>

@@ -70,6 +70,95 @@ const buildListeningExercise = (audience = 'adult') => {
 
 const getModuleId = (index, total) => Math.min(5, Math.floor(index / Math.ceil(total / 6)));
 
+const lessonContentByLevel = {
+  a1: {
+    objectives: ['Reconhecer o alfabeto e a pronúncia inicial.', 'Praticar vocabulário básico.', 'Aplicar estruturas simples em frases curtas.'],
+    vocabulary: ['Hola', 'Buenos días', 'Amigo', 'Escuela'],
+    grammarFocus: 'Presente simples e frases básicas de identificação.',
+  },
+  a2: {
+    objectives: ['Descrever rotinas e preferências.', 'Falar sobre passado recente.', 'Expressar planos simples.'],
+    vocabulary: ['Siempre', 'A veces', 'Porque', 'Viajar'],
+    grammarFocus: 'Presente, pretérito próximo e conectores básicos.',
+  },
+  b1: {
+    objectives: ['Argumentar ideias com clareza.', 'Narrar experiências com mais detalhe.', 'Expressar opinião e contraste.'],
+    vocabulary: ['Sin embargo', 'Por un lado', 'Aunque', 'Consejo'],
+    grammarFocus: 'Conectores discursivos, pretérito e subjuntivo introdutório.',
+  },
+  b2: {
+    objectives: ['Debater temas abstratos.', 'Organizar argumentos com coesão.', 'Usar registro mais formal.'],
+    vocabulary: ['Asimismo', 'Por consiguiente', 'Aun así', 'Perspectiva'],
+    grammarFocus: 'Subjuntivo, estruturas condicionais e discurso formal.',
+  },
+  c1: {
+    objectives: ['Produzir textos ricos e precisos.', 'Adaptar o registro conforme o contexto.', 'Interpretar nuances e implicações.'],
+    vocabulary: ['En efecto', 'Por ende', 'Matizar', 'Perspicaz'],
+    grammarFocus: 'Registros, nuance e estruturas complexas.',
+  },
+  c2: {
+    objectives: ['Comunicar com naturalidade e precisão.', 'Usar expressão idiomática e refinada.', 'Sustentar opiniões com sofisticação.'],
+    vocabulary: ['Sutileza', 'Matiz', 'Esbozar', 'Refinar'],
+    grammarFocus: 'Estilo, precisão léxica e produção fluida.',
+  },
+};
+
+const buildLessonContent = (levelSlug, lessonNum) => {
+  const levelKey = levelSlug.toLowerCase();
+  const base = lessonContentByLevel[levelKey] || lessonContentByLevel.a1;
+  const titleSuffix = lessonNum % 2 === 0 ? 'Prática guiada' : 'Exploração ativa';
+  return {
+    objectives: base.objectives,
+    vocabulary: base.vocabulary.slice(0, 3).concat([`Tema ${lessonNum}`]),
+    grammarFocus: `${base.grammarFocus} — ${titleSuffix}`,
+  };
+};
+
+const createLessonTemplate = ({ levelSlug, lessonNum, lessonMeta = [], index = 0, audience = 'adult' }) => {
+  const levelLabel = levelSlug.toUpperCase();
+  const meta = lessonMeta[index] ?? {
+    slug: `${levelSlug}-l${lessonNum}`,
+    title: `Aula ${lessonNum}: Fundamentos`,
+  };
+  const content = buildLessonContent(levelSlug, lessonNum);
+
+  return {
+    id: 0,
+    slug: meta.slug,
+    title: meta.title,
+    shortSummary: `Introdução ao tópico ${lessonNum} do nível ${levelLabel}.`,
+    fullSummary: `Resumo da aula ${lessonNum} do nível ${levelLabel}. Estude os conceitos e pratique o vocabulário.`,
+    image: 'https://placehold.co/600x400',
+    videoUrl: audience === 'kids'
+      ? 'https://www.youtube.com/embed/6kgJ66n_mB4'
+      : 'https://www.youtube.com/embed/hjDbeP-4h5Y',
+    slides: audience === 'kids'
+      ? [{ title: 'Slide', content: 'Infantil' }]
+      : [
+          { title: 'Slide 1', content: `Visão geral da aula ${lessonNum}.` },
+          { title: 'Vocabulário', content: `Palavras-chave e expressões úteis para a aula ${lessonNum}.` },
+          { title: 'Prática', content: 'Atividade guiada para fixação e uso contextual.' },
+        ],
+    resources: audience === 'kids'
+      ? [{ name: 'Colorir', url: '#' }]
+      : [{ name: `PDF da Aula ${lessonNum}`, url: '#' }],
+    quiz: {
+      title: audience === 'kids' ? 'Jogos' : `Quiz ${levelLabel}`,
+      questions: generateQuizQuestions(audience === 'kids' ? 1 : 2, audience),
+    },
+    listeningExercise: buildListeningExercise(audience),
+    objectives: content.objectives,
+    vocabulary: content.vocabulary,
+    grammarFocus: content.grammarFocus,
+    isFree: levelSlug === 'a1' && lessonNum <= 5,
+    moduleId: getModuleId(index, 32),
+    orderIndex: lessonNum,
+    level: levelLabel,
+    courseSlug: levelSlug,
+    audience,
+  };
+};
+
 const a1LessonMeta = [
   { slug: 'a1-01-alfabeto', title: 'El Alfabeto' },
   { slug: 'a1-02-sustantivos', title: 'Los Sustantivos' },
@@ -106,38 +195,20 @@ const a1LessonMeta = [
 ];
 
 const generateLessons = (levelSlug, count, lessonMeta = []) => {
-  const levelLabel = levelSlug.toUpperCase();
   return Array.from({ length: count }, (_, index) => {
     const lessonNum = index + 1;
-    const meta = lessonMeta[index] ?? {
-      slug: `${levelSlug}-l${lessonNum}`,
-      title: `Aula ${lessonNum}: Fundamentos`,
-    };
-    return {
-      id: ++lessonIdCounter,
-      slug: meta.slug,
-      title: meta.title,
-      shortSummary: `Introdução ao tópico ${lessonNum} do nível ${levelLabel}.`,
-      fullSummary: `Resumo da aula ${lessonNum} do nível ${levelLabel}. Estude os conceitos e pratique o vocabulário.`,
-      image: 'https://placehold.co/600x400',
-      videoUrl: 'https://www.youtube.com/embed/hjDbeP-4h5Y',
-      slides: [
-        { title: 'Slide 1', content: `Visão geral da aula ${lessonNum}.` },
-        { title: 'Vocabulário', content: 'Palavras-chave e expressões úteis.' },
-        { title: 'Prática', content: 'Atividade guiada para fixação.' },
-      ],
-      resources: [{ name: `PDF da Aula ${lessonNum}`, url: '#' }],
-      quiz: {
-        title: `Quiz ${levelLabel}`,
-        questions: generateQuizQuestions(2),
-      },
-      listeningExercise: buildListeningExercise(),
-      isFree: levelSlug === 'a1' && lessonNum <= 5,
-      moduleId: getModuleId(index, count),
-      orderIndex: lessonNum,
-      level: levelLabel,
-      courseSlug: levelSlug,
+    const template = createLessonTemplate({
+      levelSlug,
+      lessonNum,
+      lessonMeta,
+      index,
       audience: 'adult',
+    });
+
+    return {
+      ...template,
+      id: ++lessonIdCounter,
+      moduleId: getModuleId(index, count),
     };
   });
 };
@@ -178,24 +249,22 @@ export const courses = [
 const generateKidsLessons = (levelSlug, count) => {
   return Array.from({ length: count }, (_, index) => {
     const lessonNum = index + 1;
+    const template = createLessonTemplate({
+      levelSlug,
+      lessonNum,
+      index,
+      audience: 'kids',
+    });
+
     return {
+      ...template,
       id: ++lessonIdCounter,
       slug: `${levelSlug}-l${lessonNum}`,
       title: `Aventura ${lessonNum}`,
       shortSummary: `Uma aventura divertida ${lessonNum}.`,
       fullSummary: 'Vamos brincar e aprender espanhol!',
-      image: 'https://placehold.co/600x400',
-      videoUrl: 'https://www.youtube.com/embed/6kgJ66n_mB4',
-      slides: [{ title: 'Slide', content: 'Infantil' }],
-      resources: [{ name: 'Colorir', url: '#' }],
-      quiz: {
-        title: 'Jogos',
-        questions: generateQuizQuestions(1, 'kids'),
-      },
-      listeningExercise: buildListeningExercise('kids'),
       isFree: true,
       moduleId: getModuleId(index, count),
-      orderIndex: lessonNum,
       level: levelSlug.replace('kids-', ''),
       courseSlug: levelSlug,
       audience: 'kids',
