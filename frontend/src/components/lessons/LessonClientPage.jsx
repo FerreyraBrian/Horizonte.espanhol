@@ -11,12 +11,44 @@ import {
   PenTool,
   Sparkles,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  Bot,
+  Circle,
+  XCircle,
+  ArrowRight,
 } from 'lucide-react';
+import '../../styles/lesson-client.css';
+import '../../styles/buttons.css';
+import '../../styles/gamification.css';
+import gamificationService from '../../services/gamificationService';
+import {
+  triggerConfetti,
+  showXPPopup,
+  showAchievementNotification,
+  playSound,
+  triggerVibration,
+  createButtonRipple,
+  shakeElement,
+  triggerParabensEffect,
+  triggerErrorEffect,
+  createCheckmarkEffect,
+  createBurstEffect,
+  triggerRewindEffect,
+  triggerCasinoWinEffect,
+  createLuckySpinEffect,
+  createConfettiCannon,
+} from '../../services/visualEffectsService';
 
-const LessonClientPage = ({ lesson, onComplete }) => {
+const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizResults, setQuizResults] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [optionRefsKey, setOptionRefsKey] = useState(0); // Para re-animar opciones
+  const [listeningAnswers, setListeningAnswers] = useState({});
+  const [listeningResults, setListeningResults] = useState({});
+  const [listeningSubmitted, setListeningSubmitted] = useState(false);
+  const [listeningWinStreak, setListeningWinStreak] = useState(0);
   const [writingText, setWritingText] = useState('');
   const [writingSubmitted, setWritingSubmitted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -25,6 +57,12 @@ const LessonClientPage = ({ lesson, onComplete }) => {
   const [toast, setToast] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  
+  // Gamification states
+  const [gamStats, setGamStats] = useState({});
+  const [sessionStartTime] = useState(Date.now());
+  
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
@@ -44,6 +82,7 @@ const LessonClientPage = ({ lesson, onComplete }) => {
       setWritingText(parsed.writingText || '');
       setWritingSubmitted(Boolean(parsed.writingSubmitted));
       setVoiceUrl(parsed.voiceUrl || '');
+      setIsCompleted(Boolean(parsed.isCompleted));
     } catch (error) {
       console.warn('Could not restore lesson state', error);
     }
@@ -76,6 +115,11 @@ const LessonClientPage = ({ lesson, onComplete }) => {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setHasEntered(true));
+    
+    // Load gamification stats
+    setGamStats(gamificationService.getStats());
+    playSound('click');
+    
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
@@ -89,10 +133,21 @@ const LessonClientPage = ({ lesson, onComplete }) => {
       writingText,
       writingSubmitted,
       voiceUrl,
+      isCompleted,
     };
 
     localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [quizAnswers, quizResults, quizSubmitted, writingText, writingSubmitted, voiceUrl, lesson?.slug, storageKey]);
+  }, [
+    quizAnswers,
+    quizResults,
+    quizSubmitted,
+    writingText,
+    writingSubmitted,
+    voiceUrl,
+    isCompleted,
+    lesson?.slug,
+    storageKey,
+  ]);
 
   useEffect(() => {
     if (!toast) return;
@@ -125,50 +180,60 @@ const LessonClientPage = ({ lesson, onComplete }) => {
     return () => window.cancelAnimationFrame(frame);
   }, [progressPercent]);
 
+  // Animar opciones correctas e incorrectas cuando se muestran los resultados
+  useEffect(() => {
+    if (!quizSubmitted || Object.keys(quizResults).length === 0) return;
+
+    // Pequeño delay para que la animación del submit termine
+    setTimeout(() => {
+      quizQuestions.forEach((question, questionIndex) => {
+        const optionButtons = document.querySelectorAll(`.question-block:nth-child(${questionIndex + 1}) .option-button`);
+        
+        optionButtons.forEach((button, optionIndex) => {
+          const isCorrect = quizResults[questionIndex] === true;
+          const isWrong = quizResults[questionIndex] === false;
+          
+          if (isCorrect && button.classList.contains('option-correct')) {
+            // Animar opción correcta
+            const delay = optionIndex * 100;
+            setTimeout(() => {
+              createCheckmarkEffect(button);
+              createBurstEffect(
+                button.getBoundingClientRect().left + button.offsetWidth / 2,
+                button.getBoundingClientRect().top + button.offsetHeight / 2,
+                15
+              );
+            }, delay);
+          } else if (isWrong && button.classList.contains('option-wrong')) {
+            // Animar opción incorrecta
+            setTimeout(() => {
+              shakeElement(button);
+            }, questionIndex * 150);
+          }
+        });
+      });
+    }, 600);
+  }, [quizSubmitted, quizResults, quizQuestions]);
+
   if (!lesson) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-slate-700 dark:text-slate-300">Lição não encontrada.</p>
+      <div className="lesson-container">
+        <div className="lesson-activity-card">
+          <p className="text-secondary">Lição não encontrada.</p>
+        </div>
       </div>
     );
   }
-
-  const triggerButtonMotion = (event) => {
-    const button = event.currentTarget;
-    button.classList.add('is-pressed');
-
-    const ripple = document.createElement('span');
-    ripple.className = 'button-ripple';
-
-    const rect = button.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    ripple.style.width = `${size}px`;
-    ripple.style.height = `${size}px`;
-    ripple.style.left = `${x}px`;
-    ripple.style.top = `${y}px`;
-
-    button.appendChild(ripple);
-    window.requestAnimationFrame(() => ripple.classList.add('is-active'));
-
-    window.setTimeout(() => {
-      ripple.remove();
-      button.classList.remove('is-pressed');
-    }, 500);
-  };
-
-  const releaseButtonMotion = (event) => {
-    event.currentTarget.classList.remove('is-pressed');
-  };
 
   const showToast = (title, description, tone = 'info') => {
     setToast({ title, description, tone });
   };
 
-  const handleQuizSelect = (questionIndex, option) => {
+  const handleQuizSelect = (questionIndex, option, optionIndex) => {
     setQuizAnswers((prev) => ({ ...prev, [questionIndex]: option }));
+    // Reproducir sonido musical por opción seleccionada
+    playSound(`select${optionIndex}`);
+    triggerVibration([20]);
   };
 
   const handleQuizSubmit = () => {
@@ -176,6 +241,7 @@ const LessonClientPage = ({ lesson, onComplete }) => {
 
     if (missingAnswers) {
       showToast('Complete o quiz', 'Escolha uma resposta para cada pergunta antes de conferir.', 'warning');
+      playSound('error');
       return;
     }
 
@@ -187,16 +253,145 @@ const LessonClientPage = ({ lesson, onComplete }) => {
     setQuizResults(nextResults);
     setQuizSubmitted(true);
     const score = Object.values(nextResults).filter(Boolean).length;
-    showToast('Quiz concluído', `Você acertou ${score} de ${quizQuestions.length} perguntas.`, 'success');
+    
+    // Gamification
+    const result = gamificationService.completeQuiz(score, quizQuestions.length);
+    const newStats = gamificationService.getStats();
+    
+    // Efectos y sonidos de retroalimentación mejorados
+    if (score === quizQuestions.length) {
+      // PERFECTO - Efectos épicos celebratorios
+      setTimeout(() => {
+        triggerParabensEffect(window.innerWidth / 2, window.innerHeight / 2);
+      }, 200);
+      
+      setTimeout(() => {
+        showToast('¡PARABÉNS! 🎉', '¡Respondiste TODAS las preguntas correctamente! ¡Eres increíble! 🏆', 'success');
+      }, 400);
+    } else if (score > quizQuestions.length / 2) {
+      // BIEN - Efectos positivos moderados
+      setTimeout(() => {
+        createBurstEffect(window.innerWidth / 2, window.innerHeight / 2, 20);
+      }, 200);
+      playSound('success');
+      triggerVibration([30, 10, 30, 10, 30]);
+      showToast('¡Bien hecho! 👍', `Acertaste ${score} de ${quizQuestions.length}. ¡Vamos a mejorar! 💪`, 'success');
+    } else {
+      // NECESITA MEJORAR - Efectos de motivación
+      setTimeout(() => {
+        triggerErrorEffect(document.querySelector('[data-quiz-container]'));
+      }, 200);
+      
+      showToast('Sigue intentando 💭', `Acertaste ${score} de ${quizQuestions.length}. ¡Repasa y vuelve a intentarlo! 🔄`, 'warning');
+    }
+    
+    setGamStats(newStats);
+    showToast(
+      'Quiz concluído',
+      `Você acertou ${score} de ${quizQuestions.length} perguntas. +${result.xpAdded} XP`,
+      'success'
+    );
+  };
+
+  const handleQuizReset = () => {
+    setQuizAnswers({});
+    setQuizResults({});
+    setQuizSubmitted(false);
+    
+    // Efecto de retroceso/rewind
+    triggerRewindEffect();
+    
+    showToast('Quiz reiniciado', 'Você pode tentar novamente.', 'info');
   };
 
   const handleWritingSubmit = () => {
     if (!writingText.trim()) {
       showToast('Escreva algo', 'Adicione uma resposta curta para enviar a tarefa.', 'warning');
+      playSound('error');
       return;
     }
     setWritingSubmitted(true);
-    showToast('Texto enviado', 'Sua resposta foi salva para revisão.', 'success');
+    
+    // Gamification
+    gamificationService.submitWriting();
+    const newStats = gamificationService.getStats();
+    setGamStats(newStats);
+    
+    playSound('success');
+    triggerVibration([30, 10, 30]);
+    showToast('Texto enviado', 'Sua resposta foi salva para revisão. +15 XP', 'success');
+  };
+
+  const handleWritingReset = () => {
+    setWritingText('');
+    setWritingSubmitted(false);
+    showToast('Texto reiniciado', 'Você pode reescrever sua resposta.', 'info');
+  };
+
+  // ========== LISTENING EXERCISE HANDLERS ==========
+  const handleListeningSelect = (questionIndex, option, optionIndex) => {
+    setListeningAnswers((prev) => ({ ...prev, [questionIndex]: option }));
+    playSound(`select${optionIndex}`);
+    triggerVibration([20]);
+  };
+
+  const handleListeningSubmit = () => {
+    const missingAnswers = listeningQuestions.some((_, index) => !listeningAnswers[index]);
+
+    if (missingAnswers) {
+      showToast('Complete a escuta', 'Escolha uma resposta para cada pergunta antes de conferir.', 'warning');
+      playSound('error');
+      return;
+    }
+
+    const nextResults = {};
+    listeningQuestions.forEach((question, index) => {
+      const selected = listeningAnswers[index];
+      nextResults[index] = selected === question.correctAnswer;
+    });
+    setListeningResults(nextResults);
+    setListeningSubmitted(true);
+    const score = Object.values(nextResults).filter(Boolean).length;
+    const streak = Object.values(nextResults).every(Boolean) ? listeningWinStreak + 1 : 0;
+    setListeningWinStreak(streak);
+
+    // Gamification
+    gamificationService.completeListening(score, listeningQuestions.length);
+    const newStats = gamificationService.getStats();
+    setGamStats(newStats);
+
+    // Efectos y sonidos gaming/casino
+    if (score === listeningQuestions.length) {
+      // PERFECTO - Mega efecto casino
+      setTimeout(() => {
+        triggerCasinoWinEffect(window.innerWidth / 2, window.innerHeight / 2, streak);
+      }, 200);
+
+      setTimeout(() => {
+        showToast('🎰 JACKPOT! 🎰', `¡Perfecto! Racha ganadora: ${streak}x 🔥 +100 XP`, 'success');
+      }, 600);
+    } else if (score > listeningQuestions.length / 2) {
+      // BIEN - Efecto positivo gaming
+      setTimeout(() => {
+        createLuckySpinEffect(window.innerWidth / 2, window.innerHeight / 2);
+      }, 200);
+      playSound('success');
+      triggerVibration([30, 10, 30, 10, 30]);
+      showToast('🎯 ¡Buen Golpe!', `Acertaste ${score}/${listeningQuestions.length}. +50 XP`, 'success');
+    } else {
+      // NECESITA MEJORAR - Efecto motivador
+      playSound('error');
+      triggerVibration([50, 50, 50]);
+      showToast('🎲 Intenta de Nuevo', `${score}/${listeningQuestions.length} acertadas. ¡Vuelve a intentarlo! 💪`, 'warning');
+    }
+  };
+
+  const handleListeningReset = () => {
+    setListeningAnswers({});
+    setListeningResults({});
+    setListeningSubmitted(false);
+    triggerRewindEffect();
+    showToast('Escuta reiniciada', 'Você pode tentar novamente.', 'info');
   };
 
   const startRecording = async () => {
@@ -236,48 +431,186 @@ const LessonClientPage = ({ lesson, onComplete }) => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      showToast('Gravação salva', 'Sua resposta de voz ficou pronta para revisão.', 'success');
+      
+      // Gamification
+      gamificationService.recordVoice();
+      const newStats = gamificationService.getStats();
+      setGamStats(newStats);
+      
+      playSound('success');
+      triggerVibration([30, 10, 30]);
+      showToast('Gravação salva', 'Sua resposta de voz ficou pronta para revisão. +20 XP', 'success');
     }
   };
 
-  const finishLesson = () => {
-    onComplete?.(lesson.id);
-    showToast('Lição concluída', 'Parabéns! Você avançou na sua jornada.', 'success');
+  const handleVoiceReset = () => {
+    setVoiceUrl('');
+    setVoiceError('');
+    showToast('Gravação removida', 'Você pode gravar novamente.', 'info');
+  };
+
+  const handleCompleteToggle = () => {
+    const newState = !isCompleted;
+    setIsCompleted(newState);
+    if (newState) {
+      // Gamification - Complete lesson
+      const duration = Date.now() - sessionStartTime;
+      const quizScore = Object.values(quizResults).filter(Boolean).length;
+      const quizTotal = quizQuestions.length;
+      
+      gamificationService.completeLessonSession(duration, quizScore, quizTotal);
+      const newStats = gamificationService.getStats();
+      setGamStats(newStats);
+      
+      // Efectos
+      triggerConfetti('normal');
+      playSound('success');
+      triggerVibration([50, 30, 50]);
+      
+      onComplete?.(lesson.id);
+      showToast(
+        'Lección completada',
+        `¡Felicidades! Vas en clase ${newStats.completedLessons}/32. Sigue adelante 🚀`,
+        'success'
+      );
+    } else {
+      playSound('click');
+      showToast('Progreso reiniciado', 'A lição foi marcada como não concluída.', 'info');
+    }
   };
 
   return (
-    <div className="space-y-8">
-      <section className={`lesson-activity-card ${hasEntered ? 'is-visible' : ''} rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+    <div className="lesson-container">
+      {/* --- Gamification Header --- */}
+      <div className="gamification-header">
+        <div className="stat-card">
+          <span className="stat-icon">✨</span>
+          <span className="stat-value">{gamStats.totalXP || 0}</span>
+          <span className="stat-label">XP Total</span>
+        </div>
+
+        <div className="stat-card">
+          <span className="stat-icon">📚</span>
+          <span className="stat-value">{gamStats.completedLessons || 0}/32</span>
+          <span className="stat-label">Clases Completadas</span>
+        </div>
+
+        <div className="level-badge-container">
+          <div
+            className="level-badge"
+            style={{ '--progress': ((gamStats.completedLessons || 0) / 32) * 100 }}
+          >
+            <div className="level-number">
+              {Math.round(((gamStats.completedLessons || 0) / 32) * 100)}%
+            </div>
+          </div>
+          <div className="progress-label">Progreso</div>
+        </div>
+      </div>
+
+      {/* --- Navegación entre lições --- */}
+      <div className="flex flex-wrap items-center justify-between gap-3 py-4 border-b border-slate-200/50 dark:border-slate-800/50 mb-6">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onPrev}
+            className="btn-horizonte btn-secondary btn-sm"
+            disabled={!onPrev}
+          >
+            <ChevronLeft size={16} className="btn-icon" />
+            Anterior
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="btn-horizonte btn-secondary btn-sm"
+            disabled={!onNext}
+          >
+            Siguiente
+            <ChevronRight size={16} className="btn-icon btn-icon-right" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+            <CheckCircle2 size={16} className="text-emerald-500" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {completedActivities}/3
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCompleteToggle}
+            className={`btn-horizonte ${isCompleted ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+          >
+            {isCompleted ? (
+              <>
+                <CheckCircle2 size={16} className="btn-icon" />
+                Completado
+              </>
+            ) : (
+              <>
+                <Circle size={16} className="btn-icon" />
+                Marcar como Completado
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className="btn-horizonte btn-accent btn-sm relative"
+            onClick={() => showToast('Asistente AI', 'Pronto para ayudar con tus dudas.', 'info')}
+          >
+            <Bot size={16} className="btn-icon" />
+            Asistente
+            <span className="btn-badge">3</span>
+          </button>
+        </div>
+      </div>
+
+      {/* --- Hero de la Lección con XP Progress --- */}
+      <section className={`lesson-activity-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="lesson-header">
+          <span className="badge badge-blue">
             {lesson.level || 'Aula'}
           </span>
-          <div className="lesson-progress-pill rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+          <div className="lesson-progress-pill">
             Progresso: {animatedProgress}%
           </div>
         </div>
-        <h1 className="mt-4 text-3xl font-bold text-slate-900 dark:text-white">{lesson.title}</h1>
-        <p className="mt-3 max-w-3xl text-slate-600 dark:text-slate-300">{lesson.fullSummary}</p>
 
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <h1 className="heading-lg">{lesson.title}</h1>
+        <p className="lesson-summary">{lesson.fullSummary}</p>
+
+        {/* XP Progress Bar */}
+        <div style={{ marginTop: '20px' }}>
+          <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '8px' }}>
+            Experiencia: {gamStats.totalXP || 0} XP
+          </div>
+          <div className="xp-progress-bar">
+            <div
+              className="xp-progress-fill"
+              style={{ width: (gamStats.progressPercent || 0) + '%' }}
+            />
+          </div>
+        </div>
+
+        <div className="progress-container">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 transition-all duration-500"
+            className="progress-bar"
             style={{ width: `${animatedProgress}%` }}
           />
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2">
+        <div className="steps-container">
           {['quiz', 'writing', 'voice'].map((step) => {
             const isDone = completedSteps.includes(step);
             const label = step === 'quiz' ? 'Quiz' : step === 'writing' ? 'Escrita' : 'Fala';
             return (
               <div
                 key={step}
-                className={`rounded-full border px-3 py-1 text-sm font-medium ${
-                  isDone
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
-                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                }`}
+                className={`step-badge ${isDone ? 'completed' : ''}`}
               >
                 <span className="mr-2">{isDone ? '✓' : '•'}</span>
                 {label}
@@ -287,46 +620,47 @@ const LessonClientPage = ({ lesson, onComplete }) => {
         </div>
 
         {isLessonComplete ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
-            Ótimo trabalho! Você concluiu os principais passos desta lição.
+          <div className="completion-message">
+            🎉 Ótimo trabalho! Você concluiu os principais passos desta lição.
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Objetivos</p>
-            <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+        <div className="grid-3-cols">
+          <div className="info-card">
+            <p className="info-card-title">Objetivos</p>
+            <ul className="info-card-list">
               {objectives.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <li key={item} className="info-card-item">
+                  <Sparkles className="info-card-icon" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Vocabulário</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+          <div className="info-card">
+            <p className="info-card-title">Vocabulário</p>
+            <div className="vocab-tags">
               {vocabulary.map((word) => (
-                <span key={word} className="rounded-full bg-white px-3 py-1 text-sm text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300">
+                <span key={word} className="vocab-tag">
                   {word}
                 </span>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Foco gramatical</p>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{grammarFocus}</p>
+          <div className="info-card">
+            <p className="info-card-title">Foco gramatical</p>
+            <p className="text-muted">{grammarFocus}</p>
           </div>
         </div>
       </section>
 
-      <section className={`lesson-section-card ${hasEntered ? 'is-visible' : ''} rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900`}>
-        <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-          <PlayCircle className="h-5 w-5 text-blue-600" />
-          <h2 className="text-xl font-semibold">Vídeo da aula</h2>
+      {/* --- Vídeo --- */}
+      <section className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <PlayCircle className="article-header-icon" />
+          <h2 className="article-header-title">Vídeo da aula</h2>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+        <div className="video-container">
           <iframe
             width="100%"
             height={420}
@@ -339,250 +673,337 @@ const LessonClientPage = ({ lesson, onComplete }) => {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <BookOpenText className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Slides e pontos-chave</h2>
+      {/* --- Slides e Pontos-Chave --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <BookOpenText className="article-header-icon" />
+          <h2 className="article-header-title">Slides e pontos-chave</h2>
+        </div>
+        <div className="slides-container">
+          {slides.length > 0 ? (
+            slides.map((slide, index) => (
+              <div key={`${slide.title}-${index}`} className="slide-item">
+                <h3 className="slide-title">{slide.title}</h3>
+                <p className="slide-content">{slide.content}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-muted">Os slides da aula serão adicionados em breve.</p>
+          )}
+        </div>
+      </article>
+
+      {/* --- Materiais de Apoio --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <Download className="article-header-icon" />
+          <h2 className="article-header-title">Materiais de apoio</h2>
+        </div>
+        <div className="resources-container">
+          {resources.length > 0 ? (
+            resources.map((resource, index) => (
+              <a
+                key={`${resource.name}-${index}`}
+                href={resource.url}
+                target="_blank"
+                rel="noreferrer"
+                className="resource-link"
+              >
+                <Download className="resource-link-icon" />
+                {resource.name}
+              </a>
+            ))
+          ) : (
+            <p className="text-muted">Nenhum material complementar disponível ainda.</p>
+          )}
+        </div>
+      </article>
+
+      {/* --- Exercício de Escuta GAMING --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <Headphones className="article-header-icon" />
+          <h2 className="article-header-title">🎧 Juego de Escucha</h2>
+        </div>
+
+        {hasAudio ? (
+          <div className="audio-game-container">
+            <div className="audio-player-wrapper">
+              <div className="audio-label">🔊 Escucha el audio:</div>
+              <audio controls className="audio-player" style={{ width: '100%' }}>
+                <source src={lesson.listeningExercise.audioUrl} />
+                Seu navegador não suporta reprodução de áudio.
+              </audio>
+            </div>
           </div>
-          <div className="space-y-3">
-            {slides.length > 0 ? (
-              slides.map((slide, index) => (
-                <div key={`${slide.title}-${index}`} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">{slide.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{slide.content}</p>
+        ) : (
+          <p className="listening-message">
+            Este módulo não precisa de áudio separado — a prática está integrada ao vídeo e às atividades.
+          </p>
+        )}
+
+        {listeningQuestions.length > 0 && hasAudio ? (
+          <div className="listening-game-container">
+            {listeningQuestions.map((question, index) => (
+              <div key={`${question.question}-${index}`} className="listening-game-block">
+                <p className="listening-game-question">📋 {question.question}</p>
+                
+                <div className="listening-options-list">
+                  {question.options.map((option, optionIndex) => {
+                    const isSelected = listeningAnswers[index] === option;
+                    const isCorrect = listeningResults[index] === true && option === question.correctAnswer;
+                    const isWrong = listeningResults[index] === false && isSelected && option !== question.correctAnswer;
+
+                    let statusClass = '';
+                    if (isCorrect) statusClass = 'option-correct';
+                    else if (isWrong) statusClass = 'option-wrong';
+                    else if (isSelected) statusClass = 'option-selected';
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => handleListeningSelect(index, option, optionIndex)}
+                        onMouseEnter={() => !listeningSubmitted && playSound('hover')}
+                        className={`option-button option-${optionIndex} ${statusClass}`}
+                        disabled={listeningSubmitted}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="option-text">
+                          {isCorrect && <CheckCircle2 size={16} className="option-icon" />}
+                          {isWrong && <XCircle size={16} className="option-icon" />}
+                          {option}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-300">Os slides da aula serão adicionados em breve.</p>
-            )}
-          </div>
-        </article>
+              </div>
+            ))}
 
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <Download className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Materiais de apoio</h2>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {resources.length > 0 ? (
-              resources.map((resource, index) => (
-                <a
-                  key={`${resource.name}-${index}`}
-                  href={resource.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-blue-400 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
-                >
-                  <Download className="h-4 w-4" />
-                  {resource.name}
-                </a>
-              ))
-            ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-300">Nenhum material complementar disponível ainda.</p>
-            )}
-          </div>
-        </article>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <ClipboardCheck className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Quiz interativo</h2>
-          </div>
-
-          {quizQuestions.length > 0 ? (
-            <div className="space-y-4">
-              {quizQuestions.map((question, index) => (
-                <div key={`${question.question}-${index}`} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                  <p className="font-semibold text-slate-900 dark:text-white">{question.question}</p>
-                  <div className="mt-3 space-y-2">
-                    {question.options.map((option) => {
-                      const isSelected = quizAnswers[index] === option;
-                      const isCorrect = quizResults[index] === true && option === question.correctAnswer;
-                      const isWrong = quizResults[index] === false && isSelected && option !== question.correctAnswer;
-
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => handleQuizSelect(index, option)}
-                          onMouseDown={triggerButtonMotion}
-                          onMouseUp={releaseButtonMotion}
-                          onMouseLeave={releaseButtonMotion}
-                          className={`lesson-option-btn ${isSelected ? 'is-selected' : ''} ${isCorrect ? 'is-correct' : ''} ${isWrong ? 'is-wrong' : ''} flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-200'
-                              : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                          }`}
-                          aria-pressed={isSelected}
-                        >
-                          <span>{option}</span>
-                          {isCorrect ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
+            <div className="flex flex-wrap gap-3 mt-4">
               <button
                 type="button"
-                onClick={handleQuizSubmit}
-                onMouseDown={triggerButtonMotion}
-                onMouseUp={releaseButtonMotion}
-                onMouseLeave={releaseButtonMotion}
-                className="lesson-action-btn lesson-action-btn--primary rounded-xl px-4 py-2 text-sm font-semibold text-white"
+                onClick={() => {
+                  playSound('submit');
+                  triggerVibration([30, 10, 30]);
+                  handleListeningSubmit();
+                }}
+                className="btn-horizonte btn-primary"
+                disabled={listeningSubmitted}
               >
+                <CheckCircle2 size={16} className="btn-icon" />
+                Verificar Respuestas
+              </button>
+              {listeningSubmitted && (
+                <button
+                  type="button"
+                  onClick={handleListeningReset}
+                  className="btn-horizonte btn-secondary"
+                >
+                  <ArrowRight size={16} className="btn-icon" />
+                  Reintentar
+                </button>
+              )}
+            </div>
+
+            {listeningSubmitted ? (
+              <div className="completion-message mt-4">
+                ✅ Você acertou {Object.values(listeningResults).filter(Boolean).length} de {listeningQuestions.length} perguntas.
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-muted">Nenhuma pergunta de escucha nesta lição.</p>
+        )}
+      </article>
+
+      {/* --- Quiz Interativo --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <ClipboardCheck className="article-header-icon" />
+          <h2 className="article-header-title">Quiz interativo</h2>
+        </div>
+
+        {quizQuestions.length > 0 ? (
+          <div className="quiz-container" data-quiz-container>
+            {quizQuestions.map((question, index) => (
+              <div key={`${question.question}-${index}`} className="question-block">
+                <p className="question-text">{question.question}</p>
+                <div className="options-list">
+                  {question.options.map((option, optionIndex) => {
+                    const isSelected = quizAnswers[index] === option;
+                    const isCorrect = quizResults[index] === true && option === question.correctAnswer;
+                    const isWrong = quizResults[index] === false && isSelected && option !== question.correctAnswer;
+
+                    let statusClass = '';
+                    if (isCorrect) statusClass = 'option-correct';
+                    else if (isWrong) statusClass = 'option-wrong';
+                    else if (isSelected) statusClass = 'option-selected';
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => handleQuizSelect(index, option, optionIndex)}
+                        onMouseEnter={() => !quizSubmitted && playSound('hover')}
+                        className={`option-button option-${optionIndex} ${statusClass}`}
+                        disabled={quizSubmitted}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="option-text">
+                          {isCorrect && <CheckCircle2 size={16} className="option-icon" />}
+                          {isWrong && <XCircle size={16} className="option-icon" />}
+                          {option}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('submit');
+                  triggerVibration([30, 10, 30]);
+                  handleQuizSubmit();
+                }}
+                className="btn-horizonte btn-primary"
+                disabled={quizSubmitted}
+              >
+                <CheckCircle2 size={16} className="btn-icon" />
                 Verificar respostas
               </button>
-
-              {quizSubmitted ? (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
-                  Você acertou {Object.values(quizResults).filter(Boolean).length} de {quizQuestions.length} perguntas.
-                </div>
-              ) : null}
+              {quizSubmitted && (
+                <button
+                  type="button"
+                  onClick={handleQuizReset}
+                  className="btn-horizonte btn-secondary"
+                >
+                  <ArrowRight size={16} className="btn-icon" />
+                  Reintentar
+                </button>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-slate-600 dark:text-slate-300">O quiz desta aula será publicado em breve.</p>
-          )}
-        </article>
 
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <Headphones className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Exercício de escuta</h2>
+            {quizSubmitted ? (
+              <div className="completion-message mt-4">
+                ✅ Você acertou {Object.values(quizResults).filter(Boolean).length} de {quizQuestions.length} perguntas.
+              </div>
+            ) : null}
           </div>
+        ) : (
+          <p className="text-muted">O quiz desta aula será publicado em breve.</p>
+        )}
+      </article>
 
-          {hasAudio ? (
-            <audio controls className="mb-4 w-full">
-              <source src={lesson.listeningExercise.audioUrl} />
-              Seu navegador não suporta reprodução de áudio.
-            </audio>
-          ) : (
-            <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
-              Este módulo não precisa de áudio separado — a prática está integrada ao vídeo e às atividades.
-            </p>
-          )}
-
-          {listeningQuestions.length > 0 ? (
-            <ul className="space-y-3">
-              {listeningQuestions.map((question, idx) => (
-                <li key={`${question.question}-${idx}`} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                  <p className="font-semibold text-slate-900 dark:text-white">{question.question}</p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Opções: {question.options.join(', ')}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-600 dark:text-slate-300">Nenhuma pergunta extra de escuta nesta lição.</p>
-          )}
-        </article>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <PenTool className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Escrita guiada</h2>
-          </div>
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
-            Escreva uma frase ou um pequeno parágrafo usando o conteúdo da aula. Sua resposta ficará salva para revisão posterior.
-          </p>
-          <textarea
-            value={writingText}
-            onChange={(event) => setWritingText(event.target.value)}
-            rows={6}
-            placeholder="Ex.: Hola, me llamo Ana y estudio español todos los días."
-            className="lesson-writing-area w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          />
+      {/* --- Escrita Guiada --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <PenTool className="article-header-icon" />
+          <h2 className="article-header-title">Escrita guiada</h2>
+        </div>
+        <p className="writing-description">
+          Escreva uma frase ou um pequeno parágrafo usando o conteúdo da aula. Sua resposta ficará salva para revisão posterior.
+        </p>
+        <textarea
+          value={writingText}
+          onChange={(event) => setWritingText(event.target.value)}
+          rows={6}
+          placeholder="Ex.: Hola, me llamo Ana y estudio español todos los días."
+          className="lesson-writing-area"
+          disabled={writingSubmitted}
+        />
+        <div className="flex flex-wrap gap-3 mt-3">
           <button
             type="button"
             onClick={handleWritingSubmit}
-            onMouseDown={triggerButtonMotion}
-            onMouseUp={releaseButtonMotion}
-            onMouseLeave={releaseButtonMotion}
-            className="lesson-action-btn lesson-action-btn--accent mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+            className="btn-horizonte btn-accent"
+            disabled={writingSubmitted}
           >
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare size={16} className="btn-icon" />
             Enviar para revisão
           </button>
-          {writingSubmitted ? (
-            <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-300">Resposta salva. O professor poderá corrigir o texto após a entrega.</p>
-          ) : null}
-        </article>
-
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
-            <Mic className="h-5 w-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Prática de fala</h2>
-          </div>
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-300">
-            Grave uma resposta curta para praticar pronúncia e entonação.
+          {writingSubmitted && (
+            <button
+              type="button"
+              onClick={handleWritingReset}
+              className="btn-horizonte btn-secondary"
+            >
+              <ArrowRight size={16} className="btn-icon" />
+              Reescrever
+            </button>
+          )}
+        </div>
+        {writingSubmitted ? (
+          <p className="writing-submitted-message mt-3">
+            ✅ Resposta salva. O professor poderá corrigir o texto após a entrega.
           </p>
+        ) : null}
+      </article>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {!isRecording ? (
-              <button
-                type="button"
-                onClick={startRecording}
-                onMouseDown={triggerButtonMotion}
-                onMouseUp={releaseButtonMotion}
-                onMouseLeave={releaseButtonMotion}
-                className="lesson-action-btn lesson-action-btn--secondary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
-              >
-                <Mic className="h-4 w-4" />
-                Gravar resposta
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={stopRecording}
-                onMouseDown={triggerButtonMotion}
-                onMouseUp={releaseButtonMotion}
-                onMouseLeave={releaseButtonMotion}
-                className="lesson-action-btn lesson-action-btn--danger inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
-              >
-                <MicOff className="h-4 w-4" />
-                Parar gravação
-              </button>
-            )}
+      {/* --- Prática de Fala --- */}
+      <article className={`lesson-section-card ${hasEntered ? 'is-visible' : ''}`}>
+        <div className="article-header">
+          <Mic className="article-header-icon" />
+          <h2 className="article-header-title">Prática de fala</h2>
+        </div>
+        <p className="voice-description">
+          Grave uma resposta curta para praticar pronúncia e entonação.
+        </p>
+
+        <div className="flex flex-wrap gap-3">
+          {!isRecording ? (
+            <button
+              type="button"
+              onClick={startRecording}
+              className="btn-horizonte btn-secondary"
+              disabled={Boolean(voiceUrl)}
+            >
+              <Mic size={16} className="btn-icon" />
+              {voiceUrl ? 'Gravação já salva' : 'Gravar resposta'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="btn-horizonte btn-danger"
+            >
+              <MicOff size={16} className="btn-icon" />
+              Parar gravação
+            </button>
+          )}
+
+          {voiceUrl && (
+            <button
+              type="button"
+              onClick={handleVoiceReset}
+              className="btn-horizonte btn-secondary"
+            >
+              <XCircle size={16} className="btn-icon" />
+              Remover
+            </button>
+          )}
+        </div>
+
+        {voiceError ? <p className="voice-error">{voiceError}</p> : null}
+
+        {voiceUrl ? (
+          <div className="audio-preview mt-4">
+            <audio controls src={voiceUrl} className="audio-player" />
+            <p className="audio-preview-message">✅ Sua gravação ficou salva nesta sessão.</p>
           </div>
+        ) : null}
+      </article>
 
-          {voiceError ? <p className="mt-3 text-sm text-rose-600">{voiceError}</p> : null}
-
-          {voiceUrl ? (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-              <audio controls src={voiceUrl} className="w-full" />
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Sua gravação ficou salva nesta sessão.</p>
-            </div>
-          ) : null}
-        </article>
-      </section>
-
-      <button
-        type="button"
-        onClick={finishLesson}
-        onMouseDown={triggerButtonMotion}
-        onMouseUp={releaseButtonMotion}
-        onMouseLeave={releaseButtonMotion}
-        className="lesson-action-btn lesson-action-btn--primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
-      >
-        <CheckCircle2 className="h-4 w-4" />
-        Marcar como concluída
-      </button>
-
+      {/* --- Toast Notifications --- */}
       {toast ? (
-        <div className={`lesson-toast lesson-toast--${toast.tone} fixed bottom-4 right-4 z-[60] max-w-sm rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur ${
-          toast.tone === 'success'
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-200'
-            : toast.tone === 'warning'
-              ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/80 dark:text-amber-200'
-              : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/80 dark:text-blue-200'
-        }`}>
-          <p className="font-semibold">{toast.title}</p>
-          <p className="mt-1 text-sm opacity-90">{toast.description}</p>
+        <div className={`lesson-toast lesson-toast--${toast.tone}`}>
+          <p className="lesson-toast-title">{toast.title}</p>
+          <p className="lesson-toast-message">{toast.description}</p>
         </div>
       ) : null}
     </div>

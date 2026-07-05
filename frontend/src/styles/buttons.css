@@ -1,0 +1,659 @@
+/* ============================================
+   HORIZONTE ESPAÑOL - BUTTON SYSTEM
+   CSS Pure - Sistema completo de botones
+============================================ */
+
+/* VARIABLES */
+:root {
+  --btn-radius: 0.75rem;
+  --btn-transition: all 0.2s ease;
+  --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --btn-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --btn-shadow-active: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+   BASE BUTTON
+============================================ */
+
+.btn-horizonte {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  
+  /* Sizing */
+  padding: 0.625rem 1rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  
+  /* Style */
+  border: none;
+  border-radius: var(--btn-radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  
+  /* Interaction */
+  cursor: pointer;
+  user-select: none;
+  transition: var(--btn-transition);
+  position: relative;
+  overflow: hidden;
+  
+  /* Default state */
+  background-color: #e5e7eb;
+  color: #1f2937;
+  box-shadow: var(--btn-shadow);
+  
+  /* Focus state */
+  outline: none;
+}
+
+.btn-horizonte:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--btn-shadow-hover);
+}
+
+.btn-horizonte:active {
+  transform: translateY(0);
+  box-shadow: var(--btn-shadow-active);
+}
+
+.btn-horizonte:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.btn-horizonte:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .btn-horizonte {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+}
+
+/* ============================================
+   VARIANTES - ESTILOS VISUALES
+============================================ */
+
+/* PRIMARY - Acción principal (Azul) */
+.btn-primary {
+  background-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:active {
+  background-color: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    background-color: #2563eb;
+  }
+  
+  .btn-primary:hover {
+    background-color: #3b82f6;
+  }
+}
+
+/* SECONDARY - Acción alternativa (Gris) */
+.btn-secondary {
+  background-color: #6b7280;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+}
+
+.btn-secondary:active {
+  background-color: #374151;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-secondary {
+    background-color: #4b5563;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #6b7280;
+  }
+}
+
+/* ACCENT - Destacar acción (Púrpura) */
+.btn-accent {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-accent:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  filter: brightness(1.1);
+}
+
+.btn-accent:active {
+  filter: brightness(0.95);
+}
+
+/* OUTLINE - Con borde */
+.btn-outline {
+  background-color: transparent;
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+  padding: 0.5rem 0.875rem;
+  height: auto;
+  box-shadow: none;
+}
+
+.btn-outline:hover {
+  background-color: #eff6ff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.btn-outline:active {
+  background-color: #dbeafe;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-outline {
+    color: #93c5fd;
+    border-color: #93c5fd;
+  }
+  
+  .btn-outline:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* GHOST - Invisible/Transparente */
+.btn-ghost {
+  background-color: transparent;
+  color: #1f2937;
+  box-shadow: none;
+}
+
+.btn-ghost:hover {
+  background-color: #f3f4f6;
+  box-shadow: none;
+}
+
+.btn-ghost:active {
+  background-color: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-ghost {
+    color: #f3f4f6;
+  }
+  
+  .btn-ghost:hover {
+    background-color: #1f2937;
+  }
+  
+  .btn-ghost:active {
+    background-color: #111827;
+  }
+}
+
+/* DANGER - Acción destructiva (Rojo) */
+.btn-danger {
+  background-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+  background-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:active {
+  background-color: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-danger {
+    background-color: #dc2626;
+  }
+  
+  .btn-danger:hover {
+    background-color: #ef4444;
+  }
+}
+
+/* ============================================
+   TAMAÑOS
+============================================ */
+
+/* Small - 34px */
+.btn-sm {
+  height: 2rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  min-width: 2rem;
+}
+
+.btn-sm svg,
+.btn-sm [class*="icon"] {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Large - 54px */
+.btn-lg {
+  height: 3.375rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  min-width: 3.375rem;
+  gap: 0.75rem;
+}
+
+.btn-lg svg,
+.btn-lg [class*="icon"] {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+/* ============================================
+   ICONOS
+============================================ */
+
+/* Ícono a la izquierda (predeterminado) */
+.btn-icon {
+  flex-direction: row;
+}
+
+.btn-icon svg,
+.btn-icon [class*="icon"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* Ícono a la derecha */
+.btn-icon-right {
+  flex-direction: row-reverse;
+}
+
+.btn-icon-right svg,
+.btn-icon-right [class*="icon"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* Solo ícono (sin texto) */
+.btn-icon-only {
+  width: 2.5rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.btn-icon-only svg,
+.btn-icon-only [class*="icon"] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* ============================================
+   ESTADOS ESPECIALES
+============================================ */
+
+/* LOADING STATE */
+.btn-loading {
+  position: relative;
+  color: transparent;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  top: 50%;
+  left: 50%;
+  margin-left: -0.5rem;
+  margin-top: -0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-loading:disabled {
+  opacity: 1;
+  cursor: wait;
+}
+
+/* BADGE - Notificación */
+.btn-badge {
+  position: relative;
+}
+
+.btn-badge::before {
+  content: attr(data-badge);
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: #ef4444;
+  color: #ffffff;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-badge::before {
+    border-color: #1f2937;
+  }
+}
+
+/* ============================================
+   EFECTOS ESPECIALES
+============================================ */
+
+/* Ripple effect */
+.btn-ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: ripple-animation 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Pulse effect */
+.btn-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+   GRUPOS DE BOTONES
+============================================ */
+
+.btn-group {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.btn-group-vertical {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btn-group-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.btn-group-block .btn-horizonte {
+  width: 100%;
+}
+
+.btn-group-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--btn-radius);
+  overflow: hidden;
+}
+
+.btn-group-stacked .btn-horizonte {
+  border-radius: 0;
+  flex: 1;
+}
+
+.btn-group-stacked .btn-horizonte:first-child {
+  border-radius: var(--btn-radius) var(--btn-radius) 0 0;
+}
+
+.btn-group-stacked .btn-horizonte:last-child {
+  border-radius: 0 0 var(--btn-radius) var(--btn-radius);
+}
+
+/* ============================================
+   UTILIDADES
+============================================ */
+
+/* Full width */
+.btn-block {
+  width: 100%;
+  display: flex;
+}
+
+/* Sin bordes redondeados */
+.btn-square {
+  border-radius: 0;
+}
+
+/* Más redondeado */
+.btn-rounded {
+  border-radius: 9999px;
+}
+
+/* Ancho ajustado al contenido */
+.btn-fit {
+  width: auto;
+}
+
+/* ============================================
+   RESPONSIVE
+============================================ */
+
+@media (max-width: 640px) {
+  .btn-horizonte {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+  
+  .btn-sm {
+    height: 1.875rem;
+  }
+  
+  .btn-lg {
+    height: 3rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-group .btn-horizonte {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   COMBINACIONES COMUNES
+============================================ */
+
+/* Primary Large */
+.btn-primary.btn-lg {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* Primary Small */
+.btn-primary.btn-sm {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* Accent Large */
+.btn-accent.btn-lg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+}
+
+/* Danger Small */
+.btn-danger.btn-sm {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Outline Primary */
+.btn-outline.btn-primary {
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Ghost with icon */
+.btn-ghost.btn-icon {
+  gap: 0.375rem;
+}
+
+/* ============================================
+   ACCESIBILIDAD
+============================================ */
+
+/* Focus visible mejorado */
+.btn-horizonte:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Modo alto contraste */
+@media (prefers-contrast: more) {
+  .btn-horizonte {
+    border: 2px solid transparent;
+  }
+  
+  .btn-outline {
+    border-width: 2px;
+  }
+}
+
+/* Reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .btn-horizonte,
+  .btn-horizonte:hover,
+  .btn-horizonte:active {
+    transition: none;
+    transform: none !important;
+  }
+  
+  .btn-pulse {
+    animation: none;
+  }
+  
+  .btn-ripple {
+    animation: none;
+  }
+  
+  .btn-loading::after {
+    animation: none;
+  }
+}
+
+/* ============================================
+   EJEMPLO DE USO
+============================================ */
+
+/*
+<!-- Botones básicos -->
+<button class="btn-horizonte btn-primary">
+  Acción principal
+</button>
+
+<button class="btn-horizonte btn-secondary">
+  Acción alternativa
+</button>
+
+<!-- Con tamaños -->
+<button class="btn-horizonte btn-primary btn-sm">Pequeño</button>
+<button class="btn-horizonte btn-primary btn-lg">Grande</button>
+
+<!-- Con iconos -->
+<button class="btn-horizonte btn-primary btn-icon">
+  <svg>...</svg>
+  Con ícono
+</button>
+
+<button class="btn-horizonte btn-primary btn-icon-right">
+  Con ícono
+  <svg>...</svg>
+</button>
+
+<!-- Estados -->
+<button class="btn-horizonte btn-primary btn-loading">
+  Cargando...
+</button>
+
+<button class="btn-horizonte btn-primary btn-badge" data-badge="5">
+  Notificaciones
+</button>
+
+<!-- Variantes -->
+<button class="btn-horizonte btn-outline">Borde</button>
+<button class="btn-horizonte btn-ghost">Fantasma</button>
+<button class="btn-horizonte btn-danger">Peligro</button>
+<button class="btn-horizonte btn-accent">Acento</button>
+
+<!-- Grupos -->
+<div class="btn-group">
+  <button class="btn-horizonte btn-primary">Opción 1</button>
+  <button class="btn-horizonte btn-secondary">Opción 2</button>
+  <button class="btn-horizonte btn-secondary">Opción 3</button>
+</div>
+
+<!-- Full width -->
+<button class="btn-horizonte btn-primary btn-block">
+  Ancho completo
+</button>
+*/

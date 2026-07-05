@@ -3,6 +3,15 @@
         "/^cd /Users/patri/Horizonte\\.espanhol/frontend ; npm run build$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "/^cd \"c:\\\\Users\\\\patri\\\\Horizonte\\.espanhol\\\\frontend\" ; npm run build 2>&1 \\| head -50$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Users\\\\patri\\\\Horizonte\\.espanhol\" ; node -e \"\nconst mockData = require\\('\\./frontend/src/services/mockData\\.js'\\);\nconsole\\.log\\('=== LESSON TEMPLATE IMPLEMENTATION VERIFICATION ===\\\\n'\\);\nconsole\\.log\\('✅ Total Courses:', mockData\\.courses\\.length\\);\nmockData\\.courses\\.forEach\\(course => \\{\n  console\\.log\\(\\\\`  Level \\\\\\$\\{course\\.level\\}: \\\\\\$\\{course\\.lessons\\.length\\} lessons\\\\`\\);\n\\}\\);\nconsole\\.log\\(\\\\`\\\\n✅ Total Lessons Generated: \\\\\\$\\{mockData\\.lessons\\.length\\}\\\\`\\);\nconsole\\.log\\(\\\\`✅ Kids Courses: \\\\\\$\\{mockData\\.kidsCourses\\.length\\}\\\\`\\);\nconsole\\.log\\(\\\\`✅ Total All Lessons: \\\\\\$\\{mockData\\.allLessons\\.length\\}\\\\`\\);\n\nconsole\\.log\\('\\\\n=== SAMPLE LESSONS BY LEVEL ===\\\\n'\\);\nmockData\\.courses\\.forEach\\(course => \\{\n  const lesson = course\\.lessons\\[0\\];\n  console\\.log\\(\\\\`Level \\\\\\$\\{course\\.level\\} - Lesson 1:\\\\`\\);\n  console\\.log\\(\\\\`  Title: \\\\\\$\\{lesson\\.title\\}\\\\`\\);\n  console\\.log\\(\\\\`  Slug: \\\\\\$\\{lesson\\.slug\\}\\\\`\\);\n  console\\.log\\(\\\\`  Objectives: \\\\\\$\\{lesson\\.objectives\\.length\\} items\\\\`\\);\n  console\\.log\\(\\\\`  Vocabulary: \\\\\\$\\{lesson\\.vocabulary\\.length\\} items\\\\`\\);\n  console\\.log\\(\\\\`  Quiz Questions: \\\\\\$\\{lesson\\.quiz\\.questions\\.length\\}\\\\`\\);\n  console\\.log\\(\\\\`  Exercises: Quiz ✓ \\| Writing ✓ \\| Voice ✓\\\\`\\);\n  console\\.log\\(''\\);\n\\}\\);\n\" 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "netstat": true
     }
 }
