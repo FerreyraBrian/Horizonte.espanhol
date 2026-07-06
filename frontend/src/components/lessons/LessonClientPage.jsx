@@ -38,6 +38,7 @@ import {
   triggerCasinoWinEffect,
   createLuckySpinEffect,
   createConfettiCannon,
+  createStarRain,
 } from '../../services/visualEffectsService';
 
 const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
@@ -49,6 +50,8 @@ const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
   const [listeningResults, setListeningResults] = useState({});
   const [listeningSubmitted, setListeningSubmitted] = useState(false);
   const [listeningWinStreak, setListeningWinStreak] = useState(0);
+  const [currentListeningSlide, setCurrentListeningSlide] = useState(0);
+  const [showListeningCompletion, setShowListeningCompletion] = useState(true);
   const [writingText, setWritingText] = useState('');
   const [writingSubmitted, setWritingSubmitted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -215,6 +218,73 @@ const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
     }, 600);
   }, [quizSubmitted, quizResults, quizQuestions]);
 
+  // LISTENING CAROUSEL COMPLETION EFFECTS
+  useEffect(() => {
+    const isListeningComplete = listeningQuestions.length > 0 && 
+                               listeningQuestions.every((_, idx) => idx in listeningAnswers);
+    
+    if (!isListeningComplete) return;
+
+    // CELEBRACIÓN ÉPICA Y LÚDICA
+    // Fase 1: Confeti (inmediato)
+    setTimeout(() => {
+      triggerConfetti('epic');
+    }, 100);
+
+    // Fase 2: Lluvia de estrellas (a los 300ms)
+    setTimeout(() => {
+      createStarRain();
+    }, 300);
+
+    // Fase 3: Efecto parabéns en el centro (a los 600ms)
+    setTimeout(() => {
+      triggerParabensEffect(window.innerWidth / 2, window.innerHeight / 2);
+    }, 600);
+
+    // Fase 4: Casino win effect (a los 1000ms)
+    setTimeout(() => {
+      triggerCasinoWinEffect();
+    }, 1000);
+
+    // Fase 5: Sonido de celebración
+    setTimeout(() => {
+      playSound('success');
+      triggerVibration([50, 30, 50, 30, 50]);
+    }, 500);
+
+    // Fase 6: Toast celebratorio (a los 1200ms)
+    setTimeout(() => {
+      const correctCount = Object.values(listeningResults).filter(Boolean).length;
+      const total = listeningQuestions.length;
+      let message = '';
+      
+      if (correctCount === total) {
+        message = '🌟 ¡PERFECTO! ¡Completaste TODO CORRECTAMENTE! ¡ERES UNA ESTRELLA! 🌟';
+        showToast('🎉 ¡PARABÉNS! 🎉', message, 'success');
+      } else if (correctCount >= total * 0.8) {
+        message = `🎊 ¡Excelente! Acertaste ${correctCount}/${total}. ¡Muy bien! 🎊`;
+        showToast('👏 ¡Fantástico! 👏', message, 'success');
+      } else if (correctCount >= total / 2) {
+        message = `✨ ¡Bien hecho! Acertaste ${correctCount}/${total}. ¡Sigue practicando! ✨`;
+        showToast('👍 ¡Lo hiciste bien! 👍', message, 'success');
+      }
+    }, 1200);
+
+    // Gamification
+    setTimeout(() => {
+      const correctCount = Object.values(listeningResults).filter(Boolean).length;
+      gamificationService.completeListeningExercise(correctCount, listeningQuestions.length);
+      const newStats = gamificationService.getStats();
+      setGamStats(newStats);
+    }, 1500);
+
+    // Hacer que el mensaje de completación desaparezca después de 30 segundos
+    setTimeout(() => {
+      setShowListeningCompletion(false);
+    }, 30000);
+
+  }, [listeningAnswers, listeningQuestions, listeningResults]);
+
   if (!lesson) {
     return (
       <div className="lesson-container">
@@ -328,11 +398,75 @@ const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
     showToast('Texto reiniciado', 'Você pode reescrever sua resposta.', 'info');
   };
 
-  // ========== LISTENING EXERCISE HANDLERS ==========
+  // ========== LISTENING EXERCISE HANDLERS (CAROUSEL MODE) ==========
   const handleListeningSelect = (questionIndex, option, optionIndex) => {
+    // Si ya respondió, permitir cambiar la respuesta (reintentar)
+    const alreadyAnswered = questionIndex in listeningResults;
+    
+    const question = listeningQuestions[questionIndex];
+    const isCorrect = option === question.correctAnswer;
+    
+    // Guardar respuesta
     setListeningAnswers((prev) => ({ ...prev, [questionIndex]: option }));
+    
+    // Reproducir sonido por opción
     playSound(`select${optionIndex}`);
     triggerVibration([20]);
+    
+    // Establecer resultado después de delay
+    setTimeout(() => {
+      setListeningResults((prev) => ({ ...prev, [questionIndex]: isCorrect }));
+      
+      if (isCorrect) {
+        // RESPUESTA CORRECTA - Efectos de éxito
+        playSound('success');
+        triggerVibration([30, 10, 30, 10, 30]);
+        
+        // Efectos visuales
+        setTimeout(() => {
+          const btn = document.querySelector(`[data-listening-q="${questionIndex}"] .option-correct`);
+          if (btn) {
+            createCheckmarkEffect(btn);
+            createBurstEffect(
+              btn.getBoundingClientRect().left + btn.offsetWidth / 2,
+              btn.getBoundingClientRect().top + btn.offsetHeight / 2,
+              15
+            );
+          }
+        }, 100);
+        
+        // Auto-advance después de 1500ms
+        setTimeout(() => {
+          if (currentListeningSlide < listeningQuestions.length - 1) {
+            setCurrentListeningSlide(currentListeningSlide + 1);
+          }
+        }, 1500);
+      } else {
+        // RESPUESTA INCORRECTA - Efectos de error pero NO deshabilitar
+        playSound('error');
+        triggerVibration([50, 50, 50]);
+        
+        // Efecto de vibración en el botón
+        setTimeout(() => {
+          const btn = document.querySelector(`[data-listening-q="${questionIndex}"] .option-wrong`);
+          if (btn) {
+            shakeElement(btn);
+          }
+        }, 100);
+      }
+    }, 100);
+  };
+
+  const handleListeningPrevSlide = () => {
+    if (currentListeningSlide > 0) {
+      setCurrentListeningSlide(currentListeningSlide - 1);
+    }
+  };
+
+  const handleListeningNextSlide = () => {
+    if (currentListeningSlide < listeningQuestions.length - 1) {
+      setCurrentListeningSlide(currentListeningSlide + 1);
+    }
   };
 
   const handleListeningSubmit = () => {
@@ -743,75 +877,144 @@ const LessonClientPage = ({ lesson, onComplete, onPrev, onNext }) => {
         )}
 
         {listeningQuestions.length > 0 && hasAudio ? (
-          <div className="listening-game-container">
-            {listeningQuestions.map((question, index) => (
-              <div key={`${question.question}-${index}`} className="listening-game-block">
-                <p className="listening-game-question">📋 {question.question}</p>
-                
-                <div className="listening-options-list">
-                  {question.options.map((option, optionIndex) => {
-                    const isSelected = listeningAnswers[index] === option;
-                    const isCorrect = listeningResults[index] === true && option === question.correctAnswer;
-                    const isWrong = listeningResults[index] === false && isSelected && option !== question.correctAnswer;
+          <div className="listening-carousel-container quiz-container" data-quiz-container>
+            {/* Current Slide */}
+            {(() => {
+              const question = listeningQuestions[currentListeningSlide];
+              const isAnswered = currentListeningSlide in listeningAnswers;
+              const isCorrect = listeningResults[currentListeningSlide] === true;
+              
+              return (
+                <div className="carousel-slide-wrapper question-block" data-listening-q={currentListeningSlide}>
+                  {/* Slide Number */}
+                  <div className="carousel-slide-number" style={{ textAlign: 'center', marginBottom: '1rem', color: '#6b7280', fontSize: '0.875rem', fontWeight: '500' }}>
+                    Pregunta {currentListeningSlide + 1} de {listeningQuestions.length}
+                  </div>
+                  
+                  {/* Question */}
+                  <p className="question-text" style={{ fontSize: '1.125rem' }}>
+                    {question.question}
+                  </p>
+                  
+                  {/* Options */}
+                  <div className="options-list">
+                    {question.options.map((option, optionIndex) => {
+                      const isSelected = listeningAnswers[currentListeningSlide] === option;
+                      const qIsCorrect = listeningResults[currentListeningSlide] === true && option === question.correctAnswer;
+                      const qIsWrong = listeningResults[currentListeningSlide] === false && isSelected && option !== question.correctAnswer;
 
-                    let statusClass = '';
-                    if (isCorrect) statusClass = 'option-correct';
-                    else if (isWrong) statusClass = 'option-wrong';
-                    else if (isSelected) statusClass = 'option-selected';
+                      let statusClass = '';
+                      if (qIsCorrect) statusClass = 'option-correct';
+                      else if (qIsWrong) statusClass = 'option-wrong';
+                      else if (isSelected) statusClass = 'option-selected';
 
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => handleListeningSelect(index, option, optionIndex)}
-                        onMouseEnter={() => !listeningSubmitted && playSound('hover')}
-                        className={`option-button option-${optionIndex} ${statusClass}`}
-                        disabled={listeningSubmitted}
-                        aria-pressed={isSelected}
-                      >
-                        <span className="option-text">
-                          {isCorrect && <CheckCircle2 size={16} className="option-icon" />}
-                          {isWrong && <XCircle size={16} className="option-icon" />}
-                          {option}
-                        </span>
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => handleListeningSelect(currentListeningSlide, option, optionIndex)}
+                          onMouseEnter={() => !isAnswered && playSound('hover')}
+                          className={`option-button option-${optionIndex} ${statusClass}`}
+                          disabled={isAnswered && isCorrect}
+                          aria-pressed={isSelected}
+                        >
+                          <span className="option-text">
+                            {qIsCorrect && <CheckCircle2 size={16} className="option-icon" />}
+                            {qIsWrong && <XCircle size={16} className="option-icon" />}
+                            {option}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Feedback Message */}
+                  {isAnswered && (
+                    <div className="carousel-feedback" style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: isCorrect ? '#ecfdf5' : '#fef2f2', color: isCorrect ? '#065f46' : '#7f1d1d', fontSize: '0.875rem', fontWeight: '500', textAlign: 'center' }}>
+                      {isCorrect ? question.correct : question.incorrect}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })()}
 
-            <div className="flex flex-wrap gap-3 mt-4">
+            {/* Navigation Buttons */}
+            <div className="carousel-navigation" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', gap: '1rem' }}>
               <button
-                type="button"
-                onClick={() => {
-                  playSound('submit');
-                  triggerVibration([30, 10, 30]);
-                  handleListeningSubmit();
-                }}
-                className="btn-horizonte btn-primary"
-                disabled={listeningSubmitted}
+                onClick={() => { playSound('select0'); handleListeningPrevSlide(); }}
+                disabled={currentListeningSlide === 0}
+                className="btn-horizonte btn-secondary"
+                style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
               >
-                <CheckCircle2 size={16} className="btn-icon" />
-                Verificar Respuestas
+                ← Anterior
               </button>
-              {listeningSubmitted && (
-                <button
-                  type="button"
-                  onClick={handleListeningReset}
-                  className="btn-horizonte btn-secondary"
-                >
-                  <ArrowRight size={16} className="btn-icon" />
-                  Reintentar
-                </button>
-              )}
+
+              {/* Progress Bar */}
+              <div style={{ flex: 1, height: '8px', backgroundColor: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    backgroundColor: '#10b981',
+                    width: `${((currentListeningSlide + 1) / listeningQuestions.length) * 100}%`,
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => { playSound('select1'); handleListeningNextSlide(); }}
+                disabled={currentListeningSlide === listeningQuestions.length - 1}
+                className="btn-horizonte btn-secondary"
+                style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
+              >
+                Siguiente →
+              </button>
             </div>
 
-            {listeningSubmitted ? (
-              <div className="completion-message mt-4">
-                ✅ Você acertou {Object.values(listeningResults).filter(Boolean).length} de {listeningQuestions.length} perguntas.
+            {/* Completion Message */}
+            {listeningQuestions.every((_, idx) => idx in listeningAnswers) && showListeningCompletion && (
+              <div 
+                className="completion-message" 
+                style={{ 
+                  marginTop: '2rem', 
+                  padding: '1.5rem',
+                  borderRadius: '1rem',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: '3px solid #047857',
+                  boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  fontSize: '1.125rem',
+                  animation: showListeningCompletion ? 'pulse 2s infinite, slideUp 0.6s ease-out' : 'fadeOut 1s ease-out forwards',
+                  letterSpacing: '0.5px',
+                  transition: 'all 0.5s ease-out'
+                }}
+              >
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉✨🏆✨🎉</div>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  ¡Completaste el carrusel de escucha!
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: '800' }}>
+                  {(() => {
+                    const correctCount = Object.values(listeningResults).filter(Boolean).length;
+                    const total = listeningQuestions.length;
+                    const percentage = Math.round((correctCount / total) * 100);
+                    
+                    return (
+                      <>
+                        <div style={{ color: '#d1fae5', marginBottom: '0.5rem' }}>
+                          {percentage === 100 ? '🌟 ¡PERFECTO! 🌟' : `${percentage}% Correcto`}
+                        </div>
+                        <div style={{ fontSize: '0.95rem', color: '#d1fae5' }}>
+                          {correctCount} de {total} respuestas correctas
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-            ) : null}
+            )}
           </div>
         ) : (
           <p className="text-muted">Nenhuma pergunta de escucha nesta lição.</p>
